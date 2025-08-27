@@ -119,7 +119,7 @@ ENV JUPYTER_PORT=8888 \
 	JUPYTER_PLAIN_URL=0 \
 	JUPYTER_DISABLE_LSP=1 \
 	JUPYTER_LINK_ONLY=0 \
-	JUPYTER_UI=lab
+	JUPYTER_UI=notebook
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["/usr/local/bin/start-jupyter"]
