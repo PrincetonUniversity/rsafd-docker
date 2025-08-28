@@ -12,11 +12,9 @@ Includes:
 
 | Capability | Details |
 |------------|---------|
-| Multi-arch | buildx (linux/amd64, linux/arm64) |
 | Auth token | Random secure token by default (can disable) |
 | UI modes | Switch between JupyterLab or classic Notebook via `JUPYTER_UI` |
 | Quiet modes | Single-line plain or link-only output for scripting |
-| R/Python kernels | ipykernel + IRkernel installed system-wide |
 | Rsafd install | Direct repo clone into site library (non-CRAN) |
 | Healthcheck | `/usr/local/bin/healthcheck` (wired into Docker HEALTHCHECK) |
 | CI Workflow | `.github/workflows/docker-multi-arch.yml` pushes multi-tag images to GHCR |
@@ -164,9 +162,3 @@ RUN /opt/venv/bin/pip install --no-cache-dir xgboost
 ### Notes
 
 * Rsafd is cloned directly (non-CRAN); updates require rebuilding.
-* Some optional R packages (e.g., systemfonts, magick) might need extra system libs if later required.
-
-## License
-
-MIT
-
