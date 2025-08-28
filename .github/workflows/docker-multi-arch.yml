@@ -35,6 +35,10 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lowercase image name
+        run: |
+          echo "IMAGE_NAME_LOWERCASE=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/rsafd-docker" >> $GITHUB_ENV
+
       - name: Compute tags
         id: meta
         run: |
@@ -42,9 +46,9 @@ jobs:
           SHA_TAG=${GITHUB_SHA::12}
           BASE_TAG=latest
           USER_TAG="${{ github.event.inputs.tag }}"
-          TAGS="${IMAGE_NAME}:${BASE_TAG},${IMAGE_NAME}:${DATE_TAG},${IMAGE_NAME}:${SHA_TAG}"
+          TAGS="ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${BASE_TAG},ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${DATE_TAG},ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${SHA_TAG}"
           if [ -n "$USER_TAG" ]; then
-            TAGS+=" ,${IMAGE_NAME}:${USER_TAG}"
+            TAGS+=" ,ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${USER_TAG}"
           fi
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
