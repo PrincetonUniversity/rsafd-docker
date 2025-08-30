@@ -10,7 +10,18 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted # testing self-hosted runner
+    runs-on: [self-hosted, ${{ matrix.os }}, ${{ matrix.arch }}]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu, macos]
+        arch: [amd64, arm64]
+        exclude:
+          - os: ubuntu
+            arch: arm64
+          - os: macos
+            arch: amd64
+
     permissions:
       contents: read
       packages: write
@@ -20,19 +31,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
+        
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
+          
       - name: Set lowercase image name
         run: |
           echo "IMAGE_NAME_LOWERCASE=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/rsafd-docker" >> $GITHUB_ENV
@@ -44,24 +52,78 @@ jobs:
           SHA_TAG=${GITHUB_SHA::12}
           BASE_TAG=latest
           USER_TAG="${{ github.event.inputs.tag }}"
-          TAGS="ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${BASE_TAG},ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${DATE_TAG},ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${SHA_TAG}"
-          if [ -n "$USER_TAG" ]; then
-            TAGS+=" ,ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${USER_TAG}"
-          fi
+          TAGS="ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${SHA_TAG}"
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
-      - name: Build & Push (multi-arch)
+      - name: Build & Push
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
+          platforms: linux/${{ matrix.arch }}
           tags: ${{ steps.meta.outputs.tags }}
+          push: true
           provenance: false
           sbom: false
           build-args: |
             GH_OWNER=${{ github.repository_owner }}
 
+  ---
+
+  create-manifest:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/rsafd-docker
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set lowercase image name
+        run: |
+          echo "IMAGE_NAME_LOWERCASE=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/rsafd-docker" >> $GITHUB_ENV
+
+      - name: Create and push manifest list
+        run: |
+          DATE_TAG=$(date +'%Y%m%d')
+          SHA_TAG=${GITHUB_SHA::12}
+          BASE_TAG=latest
+          USER_TAG="${{ github.event.inputs.tag }}"
+
+          # Create the manifest list with the new image tags
+          docker manifest create ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${SHA_TAG} \
+            ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${SHA_TAG}
+
+          # Push the manifest list
+          docker manifest push ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${SHA_TAG}
+
+          # Update the latest and date tags
+          docker manifest create ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${DATE_TAG} \
+            ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${SHA_TAG}
+          docker manifest push ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${DATE_TAG}
+
+          docker manifest create ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${BASE_TAG} \
+            ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${SHA_TAG}
+          docker manifest push ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${BASE_TAG}
+
+          if [ -n "$USER_TAG" ]; then
+            docker manifest create ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${USER_TAG} \
+              ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${SHA_TAG}
+            docker manifest push ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${USER_TAG}
+          fi
+          
       - name: Summary
         run: |
-          echo "Pushed: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "Pushed manifest for: " >> $GITHUB_STEP_SUMMARY
+          echo "ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${{ github.sha::12 }}" >> $GITHUB_STEP_SUMMARY
+          echo "ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${{ env.DATE_TAG }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$USER_TAG" ]; then
+            echo "ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${{ env.USER_TAG }}" >> $GITHUB_STEP_SUMMARY
+          fi
