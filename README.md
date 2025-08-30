@@ -1,4 +1,4 @@
-# rsafd-docker
+# Rsafd-Docker
 
 Multi-architecture (linux/amd64 + linux/arm64) Jupyter environment with both Python and R kernels and the `Rsafd` R package pre-installed.
 
