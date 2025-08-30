@@ -2,11 +2,9 @@
 
 Multi-architecture (linux/amd64 + linux/arm64) Jupyter environment with both Python and R kernels and the `Rsafd` R package pre-installed.
 
-Includes:
-* R: rsafd (GitHub clone), IRkernel, reticulate + supporting deps
-* Python: TensorFlow, Keras, scientific stack (numpy, pandas, scipy, scikit-learn, matplotlib, seaborn)
-* Interop: reticulate wired to the Python virtualenv
-* Healthcheck: validates TensorFlow + Rsafd + reticulate bridge
+* R: Rsafd ([cloned via git repo](https://github.com/princetonuniversity/rsafd)), IRkernel, and reticulate.
+* Python: TensorFlow, Keras, scientific stack (numpy, pandas, scipy, scikit-learn, matplotlib, seaborn).
+* Healthcheck: validates TensorFlow + Rsafd + reticulate bridge.
 
 ## Feature Matrix
 
@@ -22,35 +20,14 @@ Includes:
 ## Quick Start
 
 ```bash
-IMAGE=ghcr.io/OWNER/rsafd-docker:latest   # replace OWNER
-docker run -p 8888:8888 $IMAGE
-# Terminal prints: OPEN THIS URL: http://127.0.0.1:8888/lab?token=....
+docker run -p 8888:8888 ghcr.io/OWNER/rsafd-docker:latest -v "$HOME":/workspace/notebooks
 ```
 
-Open the printed URL in a browser; both Python and R kernels appear.
+Terminal prints "OPEN THIS URL: http://127.0.0.1:8888/lab?token=".
 
-### Student Usage (Pull & Run)
+Copy the printed OPEN THIS URL line into a browser. 
 
-Give students only these two commands (replace OWNER beforehand):
-
-```bash
-docker pull ghcr.io/OWNER/rsafd-docker:latest
-docker run -p 8888:8888 ghcr.io/OWNER/rsafd-docker:latest
-```
-
-They copy the printed OPEN THIS URL line into a browser. Architecture (Intel vs Apple Silicon) is chosen automatically by Docker.
-
-Pin to a stable build (date tag example):
-```bash
-docker pull ghcr.io/OWNER/rsafd-docker:20250827
-```
-
-If the image is private, instruct them to authenticate first (PAT with `read:packages`):
-```bash
-echo "$GITHUB_PAT" | docker login ghcr.io -u GITHUB_USERNAME --password-stdin
-```
-
-### Choose UI (Lab vs Notebook)
+## Jupyter Notebook or JupyterLab
 
 ```bash
 # Classic Notebook (default)
@@ -76,16 +53,7 @@ docker run -p 8888:8888 -e JUPYTER_UI=lab $IMAGE
 | Provide explicit | `-e JUPYTER_TOKEN=yourtoken` |
 | Disable (INSECURE) | `-e JUPYTER_DISABLE_TOKEN=1` |
 
-When disabled, anyone with port access can use the server—only for trusted local use.
-
-### Mount Data / Notebooks
-
-```bash
-docker run --rm -p 8888:8888 \
-	-v "$PWD":/workspace/notebooks \
-	-v "$HOME":/home/developer/hosthome \
-	$IMAGE
-```
+When disabled, anyone with port access can use the server—only for trusted local use.  Proceed with caution.
 
 ### Environment Variable Summary
 
@@ -122,7 +90,6 @@ docker buildx create --name rsafd-builder --use 2>/dev/null || true
 docker buildx inspect --bootstrap
 docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE --push .
 ```
-
 ### GitHub Actions Workflow
 
 `.github/workflows/docker-multi-arch.yml` auto-builds on pushes to `main` and manual dispatch. Tags produced:
