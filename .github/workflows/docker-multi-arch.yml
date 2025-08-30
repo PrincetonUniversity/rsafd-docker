@@ -10,17 +10,11 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, ${{ matrix.os }}]
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu, macos]
-        arch: [amd64, arm64]
-        exclude:
-          - os: ubuntu
-            arch: arm64
-          - os: macos
-            arch: amd64
+        arch: [x64, arm64]
+    runs-on: self-hosted-${{ matrix.arch }}
 
     permissions:
       contents: read
