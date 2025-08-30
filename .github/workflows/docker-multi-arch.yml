@@ -91,32 +91,22 @@ jobs:
 
       - name: Create and push manifest list
         run: |
+          set -euo pipefail
           IMAGE=ghcr.io/${{ needs.build.outputs.image_name }}
           SHA_TAG=${{ needs.build.outputs.sha_tag }}
           DATE_TAG=${{ needs.build.outputs.date_tag }}
           USER_TAG=${{ needs.build.outputs.user_tag }}
 
-          # Create and push the sha tag manifest
-          docker manifest create $IMAGE:$SHA_TAG \
-            $IMAGE:$SHA_TAG
-          docker manifest push $IMAGE:$SHA_TAG
-
-          # Create and push the date tag
-          docker manifest create $IMAGE:$DATE_TAG \
-            $IMAGE:$SHA_TAG
-          docker manifest push $IMAGE:$DATE_TAG
-
-          # Create and push the latest tag
-          docker manifest create $IMAGE:latest \
-            $IMAGE:$SHA_TAG
-          docker manifest push $IMAGE:latest
-
-          # Create and push the user-provided tag (if any)
+          # Re-tag the already-built image/manifest (single-arch or multi-arch) using imagetools.
+          # This avoids attempting to create a manifest from an existing manifest list (which caused the failure).
+          ARGS=(-t "$IMAGE:$DATE_TAG" -t "$IMAGE:latest")
           if [ -n "$USER_TAG" ]; then
-            docker manifest create $IMAGE:$USER_TAG \
-              $IMAGE:$SHA_TAG
-            docker manifest push $IMAGE:$USER_TAG
+            ARGS+=( -t "$IMAGE:$USER_TAG" )
           fi
+          # Create new tags pointing to the same digest/manifest
+          docker buildx imagetools create "${ARGS[@]}" "$IMAGE:$SHA_TAG"
+
+          echo "Retagged $IMAGE:$SHA_TAG as: $IMAGE:$DATE_TAG, $IMAGE:latest${USER_TAG:+, $IMAGE:$USER_TAG}" 
 
       - name: Summary
         run: |
