@@ -2,51 +2,34 @@
 
 Multi-architecture (linux/amd64 + linux/arm64) Jupyter environment with both Python and R kernels and the [Rsafd](https://github.com/princetonuniversity/rsafd) R package pre-installed.
 
-Includes:
 * R, Rsafd, IRkernel, reticulate
-* Python, TensorFlow, Keras, and scientific stack (numpy, pandas, scipy, scikit-learn, matplotlib, seaborn)
-* The reticulate package configured with Python virtualenv
-* Healthcheck that validates TensorFlow + Rsafd + reticulate bridge
+* Python, TensorFlow, Keras, and a common scientific stack (numpy, pandas, scipy, scikit-learn, matplotlib, seaborn)
+* Reticulate configured with Python virtualenv, healthcheck that validates TensorFlow + Rsafd + reticulate bridge
 
 ## Quick Start
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
-2. Run the container.
-```
-docker run -p 8888:8888 -e JUPYTER_LINK_ONLY=1 -v "$HOME":/workspace/notebooks ghcr.io/princetonuniversity/rsafd-docker:latest
-```
+2. Run the container by pasting the relevant command into the Terminal within the Docker Desktop app.
+	- macOS/Linux
+		```
+		docker run -p 8888:8888 -e JUPYTER_LINK_ONLY=1 -v "$HOME":/workspace/notebooks ghcr.io/princetonuniversity/rsafd-docker:latest
+		```
+	- Windows
+		```
+		docker run -p 8888:8888 -e JUPYTER_LINK_ONLY=1 -v "${env:USERPROFILE}:/workspace/notebooks" ghcr.io/princetonuniversity/rsafd-docker:latest
+		```
+
 3. Open the printed URL in a browser to access Jupyter and work with notebooks.
 
-## Feature Matrix
+## Features
 
 | Capability | Details |
 |------------|---------|
-| Auth token | Random secure token by default (can disable) |
-| UI modes | Switch between JupyterLab or classic Notebook via `JUPYTER_UI` |
-| Quiet modes | Single-line plain or link-only output for scripting |
-| Rsafd install | Direct repo clone into site library (non-CRAN) |
+| UI modes | Switch between JupyterLab or classic Notebook via `-e JUPYTER_UI=notebook` or `-e JUPYTER_UI=lab` |
 | Healthcheck | `/usr/local/bin/healthcheck` (wired into Docker HEALTHCHECK) |
-| CI Workflow | `.github/workflows/docker-multi-arch.yml` pushes multi-tag images to GHCR |
+| Token control | Defaults to random, options to set a reusable token via `-e JUPYTER_TOKEN=yourtoken` or disable via `-e JUPYTER_DISABLE_TOKEN=1`|
 
-### Container Options (Lab vs Notebook)
-
-```
-# Classic Notebook (default)
-docker run -p 8888:8888 -e JUPYTER_UI=notebook -e JUPYTER_LINK_ONLY=1 -v "$HOME":/workspace/notebooks ghcr.io/princetonuniversity/rsafd-docker:latest
-
-# JupyterLab
-docker run -p 8888:8888 -e JUPYTER_UI=lab -e JUPYTER_LINK_ONLY=1 -v "$HOME":/workspace/notebooks ghcr.io/princetonuniversity/rsafd-docker:latest
-```
-
-### Token Control
-
-| Scenario | Setting |
-|----------|---------|
-| Random secure (default) | no vars needed |
-| Provide explicit | `-e JUPYTER_TOKEN=yourtoken` |
-| Disable (INSECURE) | `-e JUPYTER_DISABLE_TOKEN=1` |
-
-When disabled, anyone with port access can use the server—only for trusted local use.  Proceed with caution.
+## Development 
 
 ### Healthcheck
 
