@@ -86,12 +86,14 @@ RUN /opt/venv/bin/pip install --no-cache-dir xgboost
 
 ### Troubleshooting
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `exec -v failed` | Placed `-v` flag after image name | Put `-v` before the image reference |
-| Package gone after restart | Volume not mounted or different mount path | Ensure `-v hostdir:/workspace/notebooks` is present |
-| Python cannot see newly installed pkg | Notebook kernel not restarted | Restart the kernel after `!pip install` |
-| R install asks for a CRAN mirror | Non-interactive mirror missing | Add `repos='https://cloud.r-project.org'` in `install.packages()` |
+#### Dead Kernel
+
+Loading large datasets may exceed the memory allocated to the container.  Adjusting container memory allocation differs dependent upon the host platform; adjust the amount of memory available to containers on macOS via [Docker Desktop's Advanced settings](https://docs.docker.com/desktop/settings-and-maintenance/settings/).  Adjust the memory available on Microsoft Windows by [editing the WSL configuration](https://learn.microsoft.com/en-us/windows/wsl/wsl-config).
+
+
+#### Non-responsive R Package Installation
+
+R package installation may require selection of a CRAN mirror, but doing so from Jupyter may not allow interactivity.  Add `repos='https://cloud.r-project.org'` to `install.packages()` to specify a CRAN mirror manually.
 
 ### Healthcheck
 
