@@ -1,10 +1,12 @@
-# Rsafd-Docker
+# rsafd-docker
 
 Multi-architecture (linux/amd64 + linux/arm64) Jupyter environment with both Python and R kernels and the `Rsafd` R package pre-installed.
 
-* R: Rsafd ([cloned via git repo](https://github.com/princetonuniversity/rsafd)), IRkernel, and reticulate.
-* Python: TensorFlow, Keras, scientific stack (numpy, pandas, scipy, scikit-learn, matplotlib, seaborn).
-* Healthcheck: validates TensorFlow + Rsafd + reticulate bridge.
+Includes:
+* R: rsafd (GitHub clone), IRkernel, reticulate + supporting deps
+* Python: TensorFlow, Keras, scientific stack (numpy, pandas, scipy, scikit-learn, matplotlib, seaborn)
+* Interop: reticulate wired to the Python virtualenv
+* Healthcheck: validates TensorFlow + Rsafd + reticulate bridge
 
 ## Feature Matrix
 
@@ -19,15 +21,53 @@ Multi-architecture (linux/amd64 + linux/arm64) Jupyter environment with both Pyt
 
 ## Quick Start
 
+Important: All runtime options/flags (`-p`, `-v`, `-e`, etc.) must come **before** the image reference. Anything after the image is treated as a command passed to the container entrypoint (which will break, e.g. `exec -v failed`).
+
 ```bash
-docker run -p 8888:8888 ghcr.io/OWNER/rsafd-docker:latest -v "$HOME":/workspace/notebooks
+# OWNER must be lowercase (GitHub org/user) – replace OWNER below
+IMAGE=ghcr.io/owner/rsafd-docker:latest
+
+# Minimal run (no mount)
+docker run -p 8888:8888 $IMAGE
+
+# With your home directory mounted into the workspace notebooks directory
+docker run -p 8888:8888 -v "$HOME":/workspace/notebooks $IMAGE
+
+# Single colored URL line only (quiet):
+docker run -p 8888:8888 -e JUPYTER_LINK_ONLY=1 $IMAGE
+
+# Plain one-line URL (no color):
+docker run -p 8888:8888 -e JUPYTER_PLAIN_URL=1 $IMAGE
 ```
 
-Terminal prints "OPEN THIS URL: http://127.0.0.1:8888/lab?token=".
+Open the printed URL in a browser; both Python and R kernels appear. Architecture is auto-selected.
 
-Copy the printed OPEN THIS URL line into a browser. 
+### Student Usage (Pull & Run)
 
-## Jupyter Notebook or JupyterLab
+Give students only these two commands (replace OWNER with lowercase org/user first):
+
+```bash
+docker pull ghcr.io/owner/rsafd-docker:latest
+docker run -p 8888:8888 -v "$PWD":/workspace/notebooks ghcr.io/owner/rsafd-docker:latest
+```
+
+They copy the printed OPEN THIS URL line into a browser. Architecture (Intel vs Apple Silicon) is chosen automatically by Docker. If they only want a single line:
+
+```bash
+docker run -p 8888:8888 -e JUPYTER_LINK_ONLY=1 ghcr.io/owner/rsafd-docker:latest
+```
+
+Pin to a stable build (date tag example):
+```bash
+docker pull ghcr.io/OWNER/rsafd-docker:20250827
+```
+
+If the image is private, instruct them to authenticate first (PAT with `read:packages`):
+```bash
+echo "$GITHUB_PAT" | docker login ghcr.io -u GITHUB_USERNAME --password-stdin
+```
+
+### Choose UI (Lab vs Notebook)
 
 ```bash
 # Classic Notebook (default)
@@ -53,7 +93,20 @@ docker run -p 8888:8888 -e JUPYTER_UI=lab $IMAGE
 | Provide explicit | `-e JUPYTER_TOKEN=yourtoken` |
 | Disable (INSECURE) | `-e JUPYTER_DISABLE_TOKEN=1` |
 
-When disabled, anyone with port access can use the server—only for trusted local use.  Proceed with caution.
+When disabled, anyone with port access can use the server—only for trusted local use.
+
+### Mount Data / Notebooks
+
+```bash
+# Mount current directory into notebooks (most common)
+docker run --rm -p 8888:8888 -v "$PWD":/workspace/notebooks $IMAGE
+
+# Also mount your home directory (example secondary mount)
+docker run --rm -p 8888:8888 \
+	-v "$PWD":/workspace/notebooks \
+	-v "$HOME":/home/developer/hosthome \
+	$IMAGE
+```
 
 ### Environment Variable Summary
 
@@ -90,6 +143,7 @@ docker buildx create --name rsafd-builder --use 2>/dev/null || true
 docker buildx inspect --bootstrap
 docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE --push .
 ```
+
 ### GitHub Actions Workflow
 
 `.github/workflows/docker-multi-arch.yml` auto-builds on pushes to `main` and manual dispatch. Tags produced:
@@ -129,3 +183,15 @@ RUN /opt/venv/bin/pip install --no-cache-dir xgboost
 ### Notes
 
 * Rsafd is cloned directly (non-CRAN); updates require rebuilding.
+* If you see `[FATAL tini (7)] exec -v failed: No such file or directory` you likely placed `-v` (or another flag) **after** the image name. Reorder so all flags precede the image.
+* To suppress the banner entirely but still get the URL: use `JUPYTER_LINK_ONLY=1` (colored single line) or `JUPYTER_PLAIN_URL=1` (uncolored single line).
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `exec -v failed` | Volume flag after image | Move `-v` before the image reference |
+| No token shown | Using `JUPYTER_DISABLE_TOKEN=1` | Remove that env var for secure random token |
+| Only one architecture pulls | Multi-arch manifest not published yet | Re-run CI workflow to rebuild both `-amd64` & `-arm64` then aggregate |
+| Want just one URL line | Need quiet mode | Add `-e JUPYTER_LINK_ONLY=1` or `-e JUPYTER_PLAIN_URL=1` |
+
