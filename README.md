@@ -15,8 +15,7 @@ Includes:
 ```
 docker run -p 8888:8888 -e JUPYTER_LINK_ONLY=1 -v "$HOME":/workspace/notebooks ghcr.io/princetonuniversity/rsafd-docker:latest
 ```
-
-Open the printed URL in a browser to access Jupyter.
+3. Open the printed URL in a browser to access Jupyter and work with notebooks.
 
 ## Feature Matrix
 
