@@ -30,49 +30,7 @@ Multi-architecture (linux/amd64 + linux/arm64) Jupyter environment with both Pyt
 | Token control | Defaults to random, options to set a reusable token via `-e JUPYTER_TOKEN=yourtoken` or disable via `-e JUPYTER_DISABLE_TOKEN=1`|
 | Persistent user installs | Python & R packages installed in the notebook via `!pip install` / `install.packages()` persist in mounted volume |
 
-## Development 
-
-### Healthcheck
-
-Docker HEALTHCHECK runs `/usr/local/bin/healthcheck` every 2 minutes (after a 30s start period) ensuring:
-1. Python TensorFlow imports
-2. R can load Rsafd
-3. reticulate sees TensorFlow
-
-### Build Locally (Multi-Arch)
-
-```bash
-IMAGE=ghcr.io/princetonniversity/rsafd-docker:latest
-docker buildx create --name rsafd-builder --use 2>/dev/null || true
-docker buildx inspect --bootstrap
-docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE --push .
-```
-
-### GitHub Actions Workflow
-
-`.github/workflows/docker-multi-arch.yml` auto-builds on pushes to `main` and manual dispatch. Tags produced:
-* `latest`
-* Date stamp (`YYYYMMDD`)
-* Short SHA (12 chars)
-* Optional manual input tag
-
-### Runtime Smoke Tests
-
-Python:
-```python
-import tensorflow as tf, keras
-print(tf.__version__)
-```
-
-R:
-```r
-library(Rsafd)
-library(reticulate)
-py <- import('tensorflow')
-py$`__version__`
-```
-
-### Persistent Package Installs (User Space)
+## Persistent Package Installs 
 
 When you mount a host directory to `/workspace/notebooks`, the container creates a per-image hash directory that keeps any packages you install interactively:
 
@@ -112,14 +70,7 @@ To “reset” just remove the directory on the host:
 rm -rf /path/on/host/.rsafd-docker-*/
 ```
 
-### Troubleshooting
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `exec -v failed` | Placed `-v` flag after image name | Put `-v` before the image reference |
-| Package gone after restart | Volume not mounted or different mount path | Ensure `-v hostdir:/workspace/notebooks` is present |
-| Python cannot see newly installed pkg | Notebook kernel not restarted | Restart the kernel after `!pip install` |
-| R install asks for a CRAN mirror | Non-interactive mirror missing | Add `repos='https://cloud.r-project.org'` in `install.packages()` |
+## Development 
 
 ### Extending
 
@@ -131,4 +82,53 @@ RUN R -q -e "install.packages('xts', repos='https://cloud.r-project.org', depend
 Add Python packages:
 ```dockerfile
 RUN /opt/venv/bin/pip install --no-cache-dir xgboost
+```
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `exec -v failed` | Placed `-v` flag after image name | Put `-v` before the image reference |
+| Package gone after restart | Volume not mounted or different mount path | Ensure `-v hostdir:/workspace/notebooks` is present |
+| Python cannot see newly installed pkg | Notebook kernel not restarted | Restart the kernel after `!pip install` |
+| R install asks for a CRAN mirror | Non-interactive mirror missing | Add `repos='https://cloud.r-project.org'` in `install.packages()` |
+
+### Healthcheck
+
+Docker HEALTHCHECK runs `/usr/local/bin/healthcheck` every 2 minutes (after a 30s start period) ensuring:
+1. Python TensorFlow imports
+2. R can load Rsafd
+3. reticulate sees TensorFlow
+
+### Multi-Arch Local Build
+
+```bash
+IMAGE=ghcr.io/princetonniversity/rsafd-docker:latest
+docker buildx create --name rsafd-builder --use 2>/dev/null || true
+docker buildx inspect --bootstrap
+docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE --push .
+```
+
+### GitHub Actions Workflow
+
+`.github/workflows/docker-multi-arch.yml` auto-builds on pushes to `main` and manual dispatch. Tags produced:
+* `latest`
+* Date stamp (`YYYYMMDD`)
+* Short SHA (12 chars)
+* Optional manual input tag
+
+### Runtime Smoke Tests
+
+Python:
+```python
+import tensorflow as tf, keras
+print(tf.__version__)
+```
+
+R:
+```r
+library(Rsafd)
+library(reticulate)
+py <- import('tensorflow')
+py$`__version__`
 ```
