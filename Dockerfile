@@ -27,7 +27,7 @@ SHELL ["/bin/bash", "-c"]
 ## System packages (prioritize distro native binaries for arch-specific optimization)
 RUN apt-get update -y && \
 		apt-get install -y --no-install-recommends \
-			gnupg ca-certificates curl wget git build-essential openssl \
+			software-properties-common gnupg ca-certificates curl wget git build-essential openssl \
 			python3 python3-pip python3-venv python3-dev libpython3-dev \
 			nodejs \
 			r-base r-base-dev libcurl4-openssl-dev libssl-dev libxml2-dev \
