@@ -149,8 +149,9 @@ else
   SUBCOMMAND="lab"
 fi
 
+# Launch Jupyter with the correct environment variables for the kernels
 if [[ "$LINK_ONLY" == "1" ]]; then
-  exec jupyter "$SUBCOMMAND" "${ARGS[@]}" >/dev/null 2>&1
+  exec env "PYTHONPATH=${PYTHONPATH}" "PIP_TARGET=${PIP_TARGET}" "R_LIBS_USER=${R_LIBS_USER}" jupyter "$SUBCOMMAND" "${ARGS[@]}" >/dev/null 2>&1
 else
-  exec jupyter "$SUBCOMMAND" "${ARGS[@]}"
+  exec env "PYTHONPATH=${PYTHONPATH}" "PIP_TARGET=${PIP_TARGET}" "R_LIBS_USER=${R_LIBS_USER}" jupyter "$SUBCOMMAND" "${ARGS[@]}"
 fi
