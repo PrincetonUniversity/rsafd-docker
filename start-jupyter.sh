@@ -12,6 +12,28 @@ JUPYTER_UI="${JUPYTER_UI:-lab}"       # 'lab' (default) or 'notebook'
 ROOT=/workspace
 IP=0.0.0.0
 
+# Persistence root (allows per-image version segregation)
+PERSIST_TAG="${RSAFD_IMAGE_SHA:-unknown}"
+PERSIST_BASE="${ROOT}/notebooks/.rsafd-docker-${PERSIST_TAG}"
+PERSIST_PY="${PERSIST_BASE}/py"
+PERSIST_R="${PERSIST_BASE}/R"
+
+mkdir -p "${PERSIST_PY}" "${PERSIST_R}"
+
+# Prepend custom Python user site (simple .pth via PYTHONPATH)
+export PYTHONPATH="${PERSIST_PY}:${PYTHONPATH:-}"
+
+# Configure pip to default to persistent dir if user runs '!pip install pkg'
+export PIP_TARGET="${PERSIST_PY}"
+export PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# R user library path (so install.packages() without lib= writes here and survives rebuild)
+export R_LIBS_USER="${PERSIST_R}"
+mkdir -p "${R_LIBS_USER}"
+
+# Helpful MOTD line (only when banner mode)
+PERSIST_NOTE="Custom Python -> ${PERSIST_PY} | R -> ${PERSIST_R}"
+
 # Colors
 B="\e[1m"; G="\e[32m"; Y="\e[33m"; C="\e[36m"; R="\e[31m"; NC="\e[0m"
 
@@ -110,6 +132,7 @@ ${C}│${NC} Disable:  JUPYTER_DISABLE_TOKEN=${DISABLE_TOKEN}
 ${C}│${NC} LSP off:  JUPYTER_DISABLE_LSP=${DISABLE_LSP}
 ${C}│${NC} Python:   $(python3 --version 2>/dev/null | awk '{print $2}')
 ${C}│${NC} R:        $(R --version 2>/dev/null | awk 'NR==1{print $3}')
+${C}│${NC} Persist:  ${PERSIST_NOTE}
 ${C}└──────────────────────────────────────────────────────────────┘${NC}
 ${B}OPEN THIS URL:${NC} ${LOCAL_URL}
 ${B}Alt (container):${NC} ${CONTAINER_URL}

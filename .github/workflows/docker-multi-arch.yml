@@ -55,6 +55,7 @@ jobs:
           sbom: false
           build-args: |
             GH_OWNER=${{ github.repository_owner }}
+            GIT_SHA=${{ steps.meta.outputs.sha_tag }}
 
   build-arm64:
     runs-on: [self-hosted, macOS, ARM64]
@@ -102,6 +103,7 @@ jobs:
           sbom: false
           build-args: |
             GH_OWNER=${{ github.repository_owner }}
+            GIT_SHA=${{ steps.meta.outputs.sha_tag }}
 
   manifest:
     runs-on: ubuntu-latest

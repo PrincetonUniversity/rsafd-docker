@@ -8,6 +8,7 @@
 ## Replace OWNER with your GitHub org/user. Ensure you are logged in: echo $GHCR_PAT | docker login ghcr.io -u USERNAME --password-stdin
 
 ARG UBUNTU_VERSION=24.04
+ARG GIT_SHA=unknown
 FROM ubuntu:${UBUNTU_VERSION}
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -19,7 +20,8 @@ ARG GH_OWNER="OWNER"
 
 LABEL org.opencontainers.image.source="https://github.com/${GH_OWNER}/rsafd-docker" \
 	  org.opencontainers.image.description="Multi-arch Jupyter (Python + R) with rsafd, tensorflow, keras, reticulate" \
-	  org.opencontainers.image.licenses="MIT"
+	  org.opencontainers.image.licenses="MIT" \
+	  org.opencontainers.image.revision="${GIT_SHA}"
 
 ## Use bash for RUN
 SHELL ["/bin/bash", "-c"]
@@ -112,7 +114,8 @@ RUN chmod +x /usr/local/bin/healthcheck
 USER ${USERNAME}
 ENV HOME=/home/${USERNAME}
 
-ENV JUPYTER_PORT=8888 \
+ENV RSAFD_IMAGE_SHA=${GIT_SHA} \
+	JUPYTER_PORT=8888 \
 	JUPYTER_DISABLE_TOKEN=0 \
 	JUPYTER_TOKEN="" \
 	JUPYTER_LAB_ARGS="" \
