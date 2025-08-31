@@ -10,6 +10,8 @@ Includes:
 
 ## Quick Start
 
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+2. Run the container.
 ```
 docker run -p 8888:8888 -e JUPYTER_LINK_ONLY=1 -v "$HOME":/workspace/notebooks ghcr.io/princetonuniversity/rsafd-docker:latest
 ```
