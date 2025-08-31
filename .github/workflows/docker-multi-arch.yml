@@ -10,18 +10,29 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: [self-hosted, Linux, X64]
+            platform: linux/amd64
+          - os: [self-hosted, macOS, ARM64]
+            platform: linux/arm64
+    runs-on: ${{ matrix.os }}
+
     permissions:
       contents: read
       packages: write
-    env:
-      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/rsafd-docker
+
+    outputs:
+      sha_tag: ${{ steps.meta.outputs.sha_tag }}
+      date_tag: ${{ steps.meta.outputs.date_tag }}
+      user_tag: ${{ steps.meta.outputs.user_tag }}
+      image_name: ${{ steps.name.outputs.image_name }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -34,34 +45,76 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set lowercase image name
+        id: name
         run: |
-          echo "IMAGE_NAME_LOWERCASE=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/rsafd-docker" >> $GITHUB_ENV
+          IMAGE_NAME_LOWERCASE=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/rsafd-docker
+          echo "image_name=$IMAGE_NAME_LOWERCASE" >> $GITHUB_OUTPUT
 
       - name: Compute tags
         id: meta
         run: |
           DATE_TAG=$(date +'%Y%m%d')
           SHA_TAG=${GITHUB_SHA::12}
-          BASE_TAG=latest
           USER_TAG="${{ github.event.inputs.tag }}"
-          TAGS="ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${BASE_TAG},ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${DATE_TAG},ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${SHA_TAG}"
-          if [ -n "$USER_TAG" ]; then
-            TAGS+=" ,ghcr.io/${{ env.IMAGE_NAME_LOWERCASE }}:${USER_TAG}"
-          fi
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
-      - name: Build & Push (multi-arch)
+          echo "sha_tag=$SHA_TAG" >> $GITHUB_OUTPUT
+          echo "date_tag=$DATE_TAG" >> $GITHUB_OUTPUT
+          echo "user_tag=$USER_TAG" >> $GITHUB_OUTPUT
+          echo "tags=ghcr.io/${{ steps.name.outputs.image_name }}:${SHA_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Build & Push
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
+          platforms: ${{ matrix.platform }}
           tags: ${{ steps.meta.outputs.tags }}
+          push: true
           provenance: false
           sbom: false
           build-args: |
             GH_OWNER=${{ github.repository_owner }}
 
+  create-manifest:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push manifest list
+        run: |
+          set -euo pipefail
+          IMAGE=ghcr.io/${{ needs.build.outputs.image_name }}
+          SHA_TAG=${{ needs.build.outputs.sha_tag }}
+          DATE_TAG=${{ needs.build.outputs.date_tag }}
+          USER_TAG=${{ needs.build.outputs.user_tag }}
+
+          # Re-tag the already-built image/manifest (single-arch or multi-arch) using imagetools.
+          # This avoids attempting to create a manifest from an existing manifest list (which caused the failure).
+          ARGS=(-t "$IMAGE:$DATE_TAG" -t "$IMAGE:latest")
+          if [ -n "$USER_TAG" ]; then
+            ARGS+=( -t "$IMAGE:$USER_TAG" )
+          fi
+          # Create new tags pointing to the same digest/manifest
+          docker buildx imagetools create "${ARGS[@]}" "$IMAGE:$SHA_TAG"
+
+          echo "Retagged $IMAGE:$SHA_TAG as: $IMAGE:$DATE_TAG, $IMAGE:latest${USER_TAG:+, $IMAGE:$USER_TAG}" 
+
       - name: Summary
         run: |
-          echo "Pushed: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          IMAGE=ghcr.io/${{ needs.build.outputs.image_name }}
+          echo "Pushed manifests for:" >> $GITHUB_STEP_SUMMARY
+          echo "$IMAGE:${{ needs.build.outputs.sha_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "$IMAGE:latest" >> $GITHUB_STEP_SUMMARY
+          echo "$IMAGE:${{ needs.build.outputs.date_tag }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ needs.build.outputs.user_tag }}" ]; then
+            echo "$IMAGE:${{ needs.build.outputs.user_tag }}" >> $GITHUB_STEP_SUMMARY
+          fi
