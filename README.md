@@ -1,4 +1,22 @@
-# Rsafd-Docker 
+# Rsafd-Docker
+
+> [!IMPORTANT]
+> **This repository has moved and is archived.** The Jupyter image is now built and released from the [Rsafd repository](https://github.com/PrincetonUniversity/Rsafd) (`docker/jupyter/`) and published as **`ghcr.io/princetonuniversity/rsafd`**.
+>
+> Use the new image:
+>
+> - macOS/Linux
+>   ```
+>   docker run -p 8888:8888 -e JUPYTER_LINK_ONLY=1 -v "$HOME":/workspace/notebooks ghcr.io/princetonuniversity/rsafd:latest
+>   ```
+> - Windows (PowerShell)
+>   ```
+>   docker run -p 8888:8888 -e JUPYTER_LINK_ONLY=1 -v "${env:USERPROFILE}:/workspace/notebooks" ghcr.io/princetonuniversity/rsafd:latest
+>   ```
+>
+> The old `ghcr.io/princetonuniversity/rsafd-docker` image remains available but is no longer updated. Report issues at https://github.com/PrincetonUniversity/Rsafd/issues.
+>
+> The original documentation follows for reference.
 
 Multi-architecture (linux/amd64 + linux/arm64) Jupyter environment with both Python and R kernels and the [Rsafd](https://github.com/princetonuniversity/rsafd) R package pre-installed.
 
